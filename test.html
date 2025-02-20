@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+
+    <meta name="author" content="贼溜">
+    <meta name="description" content="这是贼溜随手制作的一个测试网页，仅用于测试练习使用，并无其他实用之处，最终解释权归作者贼溜所有">
+    <title>这是贼溜的一个测试网页</title>
+    <link href="03.png" type="image/png" rel="shortcut icon">
+
+    <meta http-equiv="refresh" content="60; url = https://cn.bing.com">
+
+    <style>
+        /* 需求
+            1、顶部有一个图片轮播列表，带有淡入淡出动画。
+            2、页面中有两个图片，每个图片中心有标题文本和内容文本，居中对齐。鼠标滑过图片时有放大的效果。图片的上层文字的下层有一层蒙版层。
+            3、页面底部显示加载进度条，并在进度条上方显示进度文本。
+
+            类比做法：整个界面分成3大模块，顶部：一个大容器图片列表  中部：一个大容器装载中间图片文字相关  底部：一个大容器装载进度条  整个界面来说就是一个大的布局排列
+            整个大页面布局，水平居中垂直居中，视口内容100%可见，设定舞台背景色和默认文本相关
+         */
+        body{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: antiquewhite;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 中部图片容器（父节点） */
+        .imageContainer{
+            display: flex;
+            gap: 40px;
+            margin: 40px 0;
+        }
+        /* 中部图片容器的子类（图片的显示样式） */
+        .imageCard{
+            position: relative;
+            width: 300px;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            /* 设置滑动效果 */
+            transition: transform 0.3s ease;
+        }
+        /* 设定图片的相关数据 */
+        .imageCard img{
+            width: 100%;
+            height: 100%;
+            /* 图片全覆盖模式 */
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        /* 鼠标滑入时，对图片进行操作 */
+        .imageCard:hover img{
+            transform: scale(1.1);
+        }
+
+        /* 添加图片的遮罩（蒙版） */
+        .imageMask{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            /* 可以考虑做个选中的动画效果（滑入选中：显示 滑出取消选中：隐藏） */
+            transition: opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .imageCard:hover .imageMask{
+            opacity: 0;
+        }
+
+        /* 文本容器内相关设定 */
+        .textOverlay{
+            position: absolute;
+            /* 相对父节点居中展示 */
+            top: 50%;
+            left: 50%;
+            /* 当文本内容发生改变时，修正其相对父节点居中位置展示 */
+            transform: translate(-50%, -50%);
+
+            /* 设置文本居中对齐 */
+            text-align: center;
+            color: #fff;
+            font-size: 16px;
+            /* 文本框绝对在最顶层 */
+            z-index: 1;
+        }
+
+        .textOverlay h3{
+            margin: 0 0 10px;
+            font-size: 20px;
+        }
+
+        .textOverlay p{
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* 底部进度条 */
+        .progress-bar{
+            width: 100%;
+            background-color: #ddd;
+            overflow: hidden;
+            /* 固定在底部 */
+            position: fixed;
+            /* 底部居中对齐 */
+            bottom: 0;
+            left: 0%;
+            height: 20px;
+        }
+
+        .progress-bar div{
+            height: 100%;
+            background-color: #4caf4c;
+            width: 0;
+        }
+
+        .progress-text{
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+    </style>
+
+    <body>
+        <div class="imageContainer">
+
+            <div class="imageCard">
+                <img src="1.jpg" alt="图片1">
+                <div class="imageMask"></div>
+                <!-- 标题 描述 -->
+                 <div class="textOverlay">
+                    <h3>乡村风景图片1</h3>
+                    <p>乡村风景图片1的详情描述</p>
+                 </div>
+            </div>
+
+            <div class="imageCard">
+                <img src="2.jpg" alt="图片2">
+                <div class="imageMask"></div>
+                <div class="textOverlay">
+                    <h3>乡村风景图片2</h3>
+                    <p>乡村风景图片2的详情描述</p>
+                 </div>
+            </div>
+
+        </div>
+
+        <div class="progress-text" id="progress-text">加载中。。。0%</div>
+        <div class="progress-bar">
+            <div id="progress"></div>
+        </div>
+
+        <script>
+            let progress = document.getElementById("progress")
+            let progressText = document.getElementById("progress-text")
+            let width = 0
+
+            const timeId = setInterval(()=>{
+                if(width >= 100) {
+                    clearInterval(timeId)
+                    progressText.textContent = "加载完成"
+                }else{
+                    width++;
+                    progress.style.width = width + "%";
+                    progressText.textContent = `加载中。。。${width}%`
+                }
+            },100)
+
+        </script>
+
+    </body>
+</html>
